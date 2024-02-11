@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Player</title>
+</head>
+<body>
+    <h1>오디오 파일 입력</h1>
+
+    <form action="/audio/" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".wav">
+        <button type="submit">파일 업로드</button>
+    </form>
+
+    {% if request.method == 'POST' %}
+        <h2>오디오 파일</h2>
+        <audio controls>
+            <source src="{{ url_for('file', path=audio.filepath) }}" type="audio/wav">.
+        </audio>
+
+        <h2>음성인식 결과</h2>
+        <p>{{ audio.text }}</p>
+    {% endif %}
+</body>
+</html>

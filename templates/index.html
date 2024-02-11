@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Todo List</title>
+</head>
+<body>
+
+    <h1>Todo List</h1>
+
+    <!-- Add Todo Form -->
+    <form action="/add" method="post">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required>
+        <button type="submit">Add Todo</button>
+    </form>
+
+    <!-- Todo List -->
+    <ul>
+        {% for todo in todo_list %}
+            <li>
+                <span>#{{ todo.id }} {{ todo.title }}</span>
+                {% if todo.complete %}
+                    <span style="color: green;">(Complete)</span>
+                {% else %}
+                    <span style="color: red;">(Incomplete)</span>
+                {% endif %}
+                <a class="btn btn-success" href="/update/{{ todo.id }}">Update</a>
+                <a class="btn btn-danger ms-1" href="/delete/{{ todo.id }}">Delete</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>
