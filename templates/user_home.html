@@ -5,11 +5,14 @@
     <title>회원가입</title>
 </head>
 <body>
-
 <div class="buttons-container">
-        <button class="button" onclick="location.href='signin'">로그인</button>
-        <button class="button" onclick="location.href='signup'">회원가입</button>
+    {% if current_user %}
+        <button class="button" id="signout" onclick="location.href='signout'">로그아웃({{ current_user.user_email }})</button>
+        <button class="button" id="info" onclick="location.href='info'">회원 정보({{ current_user.user_email }})</button>
+    {% else %}
+        <button class="button" id="signin" onclick="location.href='signin'">로그인</button>
+        <button class="button" id="signup" onclick="location.href='signup'">회원 가입</button>
+    {% endif %}
 </div>
-
 </body>
 </html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 정보</title>
+</head>
+<body>
+
+<div>
+    <h1>회원 정보</h1>
+    <ul>
+        <li>ID: {{ user.id }}</li>
+        <li>Email: {{ user.user_email }}</li>
+        <li>Active: {% if user.is_active %}활성화됨{% else %}비활성화됨{% endif %}</li>
+        <li>Auth Key: {{ user.auth_key }}</li>
+    </ul>
+</div>
+</body>
+</html>

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Form
 from typing import Annotated
 from fastapi import Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from jose import jwt
+from jose import jwt, JWTError
 
 from sqlalchemy.orm import Session
 from starlette.responses import RedirectResponse
@@ -15,6 +15,7 @@ import models
 from database import get_db
 
 from passlib.context import CryptContext
+
 
 router = APIRouter(prefix="/user")
 templates = Jinja2Templates(directory="templates")
@@ -43,14 +44,51 @@ def send_email(receiver_email, auth_key):
         server.sendmail(SENDER_EMAIL, receiver_email,
                         f"You can complete your registration by clicking the following link.\n"
                         f"http://127.0.0.1:8000/user/email_auth/{auth_key}", )
-
-
 #####################################
 
 
+def get_current_user(token: str, db: Annotated[Session, Depends(get_db)]):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_email: str = payload.get("sub")
+        if user_email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    else:
+        user = db.query(models.User).filter(models.User.user_email == user_email).first()
+        if user is None:
+            raise credentials_exception
+        return user
+
+
 @router.get("/")
-def user_home(request: Request):
-    return templates.TemplateResponse("user_home.html", {"request": request})
+def user_home(request: Request, db: Annotated[Session, Depends(get_db)]):
+    access_token = request.cookies.get('access_token')
+    if access_token:
+        current_user = get_current_user(access_token, db)
+    else:
+        current_user = None
+    return templates.TemplateResponse("user_home.html", {"request": request, "current_user": current_user})
+
+
+@router.get("/info")
+def user_info(request: Request, db: Annotated[Session, Depends(get_db)]):
+    access_token = request.cookies.get('access_token')
+    if access_token:
+        current_user = get_current_user(access_token, db)
+    else:
+        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Could not validate credentials",
+                            headers={"WWW-Authenticate": "Bearer"},
+                        )
+    return templates.TemplateResponse("user_info.html", {"request": request, "user": current_user})
 
 
 @router.get("/signup")
@@ -93,15 +131,15 @@ def signin_form(request: Request):
 
 
 @router.post("/signin")
-def signin(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+def signin(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
            db: Annotated[Session, Depends(get_db)]):
 
     user = db.query(models.User).filter(models.User.user_email == form_data.username).first()
 
     if not user or not pwd_context.verify(form_data.password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ID 혹은 비밀번호가 올바르지 않습니다.")
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성된 회원입니다. 이메일 인증을 완료해주세요.")
+    # if not user.is_active:
+    #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성된 회원입니다. 이메일 인증을 완료해주세요.")
 
     # access token 만들기
     data = {
@@ -110,11 +148,13 @@ def signin(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, D
     }
     access_token = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
     # 쿠키에 토큰 저장
+    response = RedirectResponse(url=router.url_path_for("user_home"), status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(key="access_token", value=access_token, httponly=True)
-    return jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+    return response
 
 
 @router.get("/signout")
-def signout(response: Response):
+def signout():
+    response = RedirectResponse(url=router.url_path_for("user_home"))
     response.delete_cookie(key="access_token")
-    return "로그아웃 성공"
+    return response
